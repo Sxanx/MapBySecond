@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบติดตามที่อยู่นักเรียน</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #800020, #a0002a);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            position: absolute;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(128, 0, 32, 0.85);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-size: 1rem;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .status-counter {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .status-counter span {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .container {
+            position: relative;
+            height: 100vh;
+        }
+
+        .stats-overlay {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            padding: 1rem;
+            z-index: 1000;
+            min-width: 200px;
+        }
+
+        .sidebar {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            width: 350px;
+            max-height: calc(100vh - 120px);
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            padding: 1.5rem;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            top: 50%;
+            right: -40px;
+            transform: translateY(-50%);
+            background: #800020;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 60px;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            font-size: 1.2rem;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: #a0002a;
+        }
+
+        .collapse-button {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(128, 0, 32, 0.9);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            z-index: 1001;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .collapse-button:hover {
+            background: rgba(160, 0, 42, 0.9);
+        }
+
+        .form-section {
+            margin-bottom: 2rem;
+        }
+
+        .form-section h3 {
+            color: #800020;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #800020;
+            padding-bottom: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #800020;
+            box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.1);
+        }
+
+        .btn {
+            background: #800020;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: #a0002a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(128, 0, 32, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .map-container {
+            width: 100%;
+            height: 100%;
+            background: white;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .student-list {
+            margin-top: 1rem;
+        }
+
+        .student-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin-bottom: 0.8rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .student-item:hover {
+            background: #fff;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(128, 0, 32, 0.15);
+            border-color: #800020;
+        }
+
+        .student-name {
+            font-weight: 700;
+            color: #800020;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .student-details {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .student-details i {
+            margin-right: 0.5rem;
+            color: #800020;
+        }
+
+        .student-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-visited {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-not-visited {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .btn-small {
+            background: #800020;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin: 0.25rem 0.25rem 0 0;
+            transition: background 0.3s ease;
+            display: inline-block;
+        }
+
+        .btn-small:hover {
+            background: #a0002a;
+        }
+
+        .btn-small.btn-view {
+            background: #007bff;
+        }
+
+        .btn-small.btn-view:hover {
+            background: #0056b3;
+        }
+
+
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: calc(100vw - 2rem);
+                left: 1rem;
+                right: 1rem;
+                max-height: calc(100vh - 140px);
+            }
+            
+            .map-container {
+                height: 100%;
+            }
+
+            .stats-overlay {
+                top: 0.5rem;
+                right: 0.5rem;
+                padding: 0.8rem;
+                min-width: 150px;
+            }
+            
+            .header {
+                top: 0.5rem;
+                padding: 0.4rem 1rem;
+                gap: 0.5rem;
+            }
+
+            .header h1 {
+                font-size: 0.9rem;
+            }
+
+            .status-counter {
+                padding: 0.2rem 0.6rem;
+            }
+
+            .status-counter span {
+                font-size: 0.8rem;
+            }
+
+            .student-item {
+                padding: 1rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .student-name {
+                font-size: 1rem;
+            }
+
+            .collapse-button {
+                top: 0.5rem;
+                left: 0.5rem;
+                width: 35px;
+                height: 35px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ระบบติดตามที่อยู่นักเรียน</h1>
+        <div class="status-counter">
+            <span id="notVisitedCount">0</span> คนยังไม่ได้เยี่ยม
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+
+
+            <div class="form-section">
+                <h3>เพิ่มข้อมูลนักเรียน</h3>
+                <form id="studentForm">
+                    <div class="form-group">
+                        <label for="studentNumber">เลขที่นักเรียน</label>
+                        <input type="number" id="studentNumber" name="studentNumber" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="studentName">ชื่อ-นามสกุล</label>
+                        <input type="text" id="studentName" name="studentName" required>
+                    </div>
+                    
+
+                    
+                    <div class="form-group">
+                        <label for="latitude">ละติจูด (Latitude)</label>
+                        <input type="number" id="latitude" name="latitude" step="any" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="longitude">ลองจิจูด (Longitude)</label>
+                        <input type="number" id="longitude" name="longitude" step="any" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="visitStatus">สถานะการเยี่ยม</label>
+                        <select id="visitStatus" name="visitStatus" required>
+                            <option value="not_visited">ยังไม่ได้เยี่ยม</option>
+                            <option value="visited">เยี่ยมแล้ว</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn">เพิ่มตำแหน่งนักเรียน</button>
+                </form>
+            </div>
+
+            <div class="form-section">
+                <h3>รายชื่อนักเรียน</h3>
+                <div id="studentList" class="student-list">
+                    <!-- Students will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <button class="collapse-button" id="collapseButton">☰</button>
+            <div class="stats-overlay">
+                <div style="background: linear-gradient(135deg, #800020, #a0002a); color: white; padding: 0.8rem; border-radius: 8px; margin-bottom: 0.8rem;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: bold;" id="totalStudents">0</div>
+                        <div style="font-size: 0.8rem;">นักเรียนทั้งหมด</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <div style="flex: 1; background: #d4edda; padding: 0.6rem; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #155724;" id="visitedCount">0</div>
+                        <div style="color: #155724; font-size: 0.7rem;">เยี่ยมแล้ว</div>
+                    </div>
+                    <div style="flex: 1; background: #f8d7da; padding: 0.6rem; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #721c24;" id="notVisitedCountSidebar">0</div>
+                        <div style="color: #721c24; font-size: 0.7rem;">ยังไม่เยี่ยม</div>
+                    </div>
+                </div>
+            </div>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([13.7563, 100.5018], 12); // Default to Bangkok
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Store students data (in real app, this would be from MySQL)
+        let students = JSON.parse(localStorage.getItem('students')) || [];
+        let studentMarkers = {};
+
+        // Sidebar toggle functionality
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.getElementById('sidebarToggle');
+            
+            sidebar.classList.toggle('collapsed');
+            toggle.textContent = sidebar.classList.contains('collapsed') ? '☰' : '✕';
+        });
+
+        // Collapse button functionality
+        document.getElementById('collapseButton').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.getElementById('sidebarToggle');
+            
+            sidebar.classList.toggle('collapsed');
+            toggle.textContent = sidebar.classList.contains('collapsed') ? '☰' : '✕';
+        });
+
+        // Custom icons for visited/not visited
+        const visitedIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background: #28a745; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+        });
+
+        const notVisitedIcon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background: #dc3545; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+        });
+
+        // Function to add student to map
+        function addStudentToMap(student) {
+            const icon = student.status === 'visited' ? visitedIcon : notVisitedIcon;
+            
+            const marker = L.marker([student.lat, student.lng], { icon: icon })
+                .addTo(map)
+                .bindPopup(`
+                    <div style="font-family: Arial, sans-serif;">
+                        <h4 style="margin: 0 0 8px 0; color: #800020;">เลขที่ ${student.number} - ${student.name}</h4>
+                        <p style="margin: 4px 0;"><strong>สถานะ:</strong> 
+                            <span style="color: ${student.status === 'visited' ? '#28a745' : '#dc3545'};">
+                                ${student.status === 'visited' ? 'เยี่ยมแล้ว' : 'ยังไม่ได้เยี่ยม'}
+                            </span>
+                        </p>
+                        <button onclick="openInGoogleMaps(${student.lat}, ${student.lng})" 
+                                style="background: #800020; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-top: 8px;">
+                            เปิดใน Google Maps
+                        </button>
+                    </div>
+                `);
+            
+            studentMarkers[student.id] = marker;
+        }
+
+        // Function to open location in Google Maps
+        function openInGoogleMaps(lat, lng) {
+            const url = `https://www.google.com/maps?q=${lat},${lng}`;
+            window.open(url, '_blank');
+        }
+
+        // Function to view student location on map
+        function viewStudentLocation(studentId) {
+            const student = students.find(s => s.id === studentId);
+            if (student) {
+                map.setView([student.lat, student.lng], 16);
+                const marker = studentMarkers[studentId];
+                if (marker) {
+                    marker.openPopup();
+                }
+                
+                // Close sidebar on mobile for better view
+                if (window.innerWidth <= 768) {
+                    const sidebar = document.getElementById('sidebar');
+                    const toggle = document.getElementById('sidebarToggle');
+                    sidebar.classList.add('collapsed');
+                    toggle.textContent = '☰';
+                }
+            }
+        }
+
+        // Function to update student list in sidebar
+        function updateStudentList() {
+            const listContainer = document.getElementById('studentList');
+            listContainer.innerHTML = '';
+
+            // Sort students by student number
+            const sortedStudents = [...students].sort((a, b) => a.number - b.number);
+
+            sortedStudents.forEach(student => {
+                const studentDiv = document.createElement('div');
+                studentDiv.className = 'student-item';
+                studentDiv.onclick = () => viewStudentLocation(student.id);
+                studentDiv.innerHTML = `
+                    <div class="student-name">เลขที่ ${student.number} - ${student.name}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.8rem;">
+                        <span class="student-status ${student.status === 'visited' ? 'status-visited' : 'status-not-visited'}">
+                            ${student.status === 'visited' ? '✅ เยี่ยมแล้ว' : '⏳ ยังไม่ได้เยี่ยม'}
+                        </span>
+                        <div onclick="event.stopPropagation();">
+                            <button class="btn-small" onclick="toggleVisitStatus(${student.id})">
+                                ${student.status === 'visited' ? '❌' : '✅'}
+                            </button>
+                            <button class="btn-small" onclick="openInGoogleMaps(${student.lat}, ${student.lng})">
+                                🗺️
+                            </button>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(studentDiv);
+            });
+        }
+
+        // Function to update not visited counter
+        function updateNotVisitedCounter() {
+            const notVisitedCount = students.filter(s => s.status === 'not_visited').length;
+            const visitedCount = students.filter(s => s.status === 'visited').length;
+            const totalCount = students.length;
+            
+            document.getElementById('notVisitedCount').textContent = notVisitedCount;
+            document.getElementById('notVisitedCountSidebar').textContent = notVisitedCount;
+            document.getElementById('visitedCount').textContent = visitedCount;
+            document.getElementById('totalStudents').textContent = totalCount;
+        }
+
+        // Function to toggle visit status
+        function toggleVisitStatus(studentId) {
+            const student = students.find(s => s.id === studentId);
+            if (student) {
+                student.status = student.status === 'visited' ? 'not_visited' : 'visited';
+                
+                // Update marker icon
+                const marker = studentMarkers[studentId];
+                if (marker) {
+                    map.removeLayer(marker);
+                    addStudentToMap(student);
+                }
+                
+                // Save to localStorage (in real app, this would be MySQL)
+                localStorage.setItem('students', JSON.stringify(students));
+                
+                updateStudentList();
+                updateNotVisitedCounter();
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('studentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const student = {
+                id: Date.now(), // Simple ID generation
+                number: parseInt(formData.get('studentNumber')),
+                name: formData.get('studentName'),
+                lat: parseFloat(formData.get('latitude')),
+                lng: parseFloat(formData.get('longitude')),
+                status: formData.get('visitStatus')
+            };
+
+            // Add to students array
+            students.push(student);
+            
+            // Save to localStorage (in real app, this would be MySQL via PHP)
+            localStorage.setItem('students', JSON.stringify(students));
+            
+            // Add to map
+            addStudentToMap(student);
+            
+            // Update UI
+            updateStudentList();
+            updateNotVisitedCounter();
+            
+            // Reset form
+            e.target.reset();
+            
+            // Center map on new student location
+            map.setView([student.lat, student.lng], 15);
+        });
+
+        // Load existing students on page load
+        function loadStudents() {
+            students.forEach(student => {
+                addStudentToMap(student);
+            });
+            updateStudentList();
+            updateNotVisitedCounter();
+        }
+
+        // Initialize the application
+        loadStudents();
+
+        // Add some sample data if none exists
+        if (students.length === 0) {
+            const sampleStudents = [
+                {
+                    id: 1,
+                    number: 1,
+                    name: "สมชาย ใจดี",
+                    lat: 13.7563,
+                    lng: 100.5018,
+                    status: "not_visited"
+                },
+                {
+                    id: 2,
+                    number: 5,
+                    name: "สมหญิง รักเรียน",
+                    lat: 13.7465,
+                    lng: 100.5345,
+                    status: "visited"
+                },
+                {
+                    id: 3,
+                    number: 12,
+                    name: "วิชัย เก่งมาก",
+                    lat: 13.7650,
+                    lng: 100.4900,
+                    status: "not_visited"
+                },
+                {
+                    id: 4,
+                    number: 3,
+                    name: "มาลี สวยงาม",
+                    lat: 13.7300,
+                    lng: 100.5200,
+                    status: "visited"
+                }
+            ];
+            
+            students = sampleStudents;
+            localStorage.setItem('students', JSON.stringify(students));
+            loadStudents();
+        }
+
+        // Add click handler to map for easy coordinate selection
+        map.on('click', function(e) {
+            document.getElementById('latitude').value = e.latlng.lat.toFixed(6);
+            document.getElementById('longitude').value = e.latlng.lng.toFixed(6);
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9674c16560c2f8f8',t:'MTc1Mzg3NzQ1NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
