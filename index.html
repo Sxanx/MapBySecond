@@ -19,7 +19,42 @@
             color: #333;
         }
 
+        .header {
+            position: absolute;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(128, 0, 32, 0.85);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
 
+        .header h1 {
+            font-size: 1rem;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .status-counter {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .status-counter span {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
 
         .container {
             position: relative;
@@ -262,7 +297,23 @@
                 min-width: 150px;
             }
             
+            .header {
+                top: 0.5rem;
+                padding: 0.4rem 1rem;
+                gap: 0.5rem;
+            }
 
+            .header h1 {
+                font-size: 0.9rem;
+            }
+
+            .status-counter {
+                padding: 0.2rem 0.6rem;
+            }
+
+            .status-counter span {
+                font-size: 0.8rem;
+            }
 
             .student-item {
                 padding: 1rem;
@@ -284,7 +335,12 @@
     </style>
 </head>
 <body>
-
+    <div class="header">
+        <h1>ระบบติดตามที่อยู่นักเรียน</h1>
+        <div class="status-counter">
+            <span id="notVisitedCount">0</span> คนยังไม่ได้เยี่ยม
+        </div>
+    </div>
 
     <div class="container">
         <div class="sidebar" id="sidebar">
@@ -596,7 +652,7 @@
                     lat: 13.895278,
                     lng: 100.518194,
                     status: "not_visited"
-                },
+                }
             ];
             
             students = sampleStudents;
@@ -610,5 +666,5 @@
             document.getElementById('longitude').value = e.latlng.lng.toFixed(6);
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9674df88105ff938',t:'MTc1Mzg3ODY4OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9674d1c46053a185',t:'MTc1Mzg3ODEyNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
